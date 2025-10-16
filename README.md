@@ -198,3 +198,178 @@ def extract_from_table_rows(rows):
 
 if __name__ == '__main__':
     main()
+/编程2
+import re
+from typing import List, Union
+
+
+def reg_search(text: str, regex_list: List[str]) -> List[str]:
+    """
+    自定义正则匹配函数
+
+    参数:
+    text (str): 需要正则匹配的文本内容
+    regex_list (List[str]): 正则表达式列表
+
+    返回:
+    List[str]: 匹配到的结果列表
+    """
+    matches = []  # 存储所有匹配结果
+
+    # 遍历正则表达式列表中的每个模式
+    for regex_pattern in regex_list:
+        try:
+            # 使用re.findall查找所有匹配项
+            pattern_matches = re.findall(regex_pattern, text)
+
+            # 将匹配结果添加到总列表中
+            if pattern_matches:
+                # 处理findall返回的不同格式（字符串列表或元组列表）
+                if isinstance(pattern_matches[0], tuple):
+                    # 如果是分组匹配，将元组转换为字符串
+                    for match_tuple in pattern_matches:
+                        # 过滤掉空分组，合并非空分组
+                        valid_groups = [str(item) for item in match_tuple if item]
+                        if valid_groups:
+                            matches.extend(valid_groups)
+                else:
+                    # 如果是普通匹配，直接添加
+                    matches.extend([str(match) for match in pattern_matches])
+
+        except re.error as e:
+            print(f"正则表达式错误: {regex_pattern} - 错误信息: {e}")
+            continue  # 跳过无效的正则表达式
+
+    return matches
+
+
+# 测试示例
+def test_reg_search():
+    """测试函数"""
+    # 示例文本（根据图片内容）
+    text = """
+    标的证券：本期发行的证券为可交换为发行人所持中国长江电力股份
+    有限公司股票（股票代码：600900.SH，股票简称：长江电力）的可交换公司债券。
+    换股期限：本期可交换公司债券换股期限自可交换公司债券发行结束
+    之日满 12 个月后的第一个交易日起至可交换债券到期日止，即2023年 6 月 2 日至 2027 年 6 月 1 日止。
+    """
+
+    # 根据文本内容设计一些常用的正则表达式模式
+    regex_list = [
+        # 匹配股票代码（如：600900.SH）
+        r'[0-9]{6}\.[A-Z]{2}',
+        # 匹配股票简称（如：长江电力）
+        r'股票简称：([\u4e00-\u9fa5]+)',
+        # 匹配日期范围（如：2023年 6 月 2 日至 2027 年 6 月 1 日）
+        r'\d{4}年\s*\d{1,2}月\s*\d{1,2}日至\d{4}年\s*\d{1,2}月\s*\d{1,2}日',
+        # 匹配单个日期
+        r'\d{4}年\s*\d{1,2}月\s*\d{1,2}日',
+        # 匹配年份范围
+        r'\d{4}年至\d{4}年',
+        # 匹配公司名称（中文字符）
+        r'[\u4e00-\u9fa5股份有限公司]+',
+        # 匹配证券类型
+        r'可交换公司债券|公司债券|债券',
+        # 匹配数字（如：12个月）
+        r'\d+个月',
+    ]
+
+    # 执行匹配
+    results = reg_search(text, regex_list)
+
+    # 打印结果
+    print("原始文本:")
+    print(text)
+    print("\n正则表达式列表:")
+    for i, pattern in enumerate(regex_list, 1):
+        print(f"{i}. {pattern}")
+
+    print("\n匹配结果:")
+    for i, result in enumerate(results, 1):
+        print(f"{i}. {result}")
+
+    return results
+
+
+# 增强版函数，提供更多匹配信息
+def reg_search_enhanced(text: str, regex_list: List[str], return_groups: bool = False) -> List[dict]:
+    """
+    增强版正则匹配函数，返回更详细的信息
+
+    参数:
+    text (str): 需要正则匹配的文本内容
+    regex_list (List[str]): 正则表达式列表
+    return_groups (bool): 是否返回分组信息
+
+    返回:
+    List[dict]: 包含匹配详细信息的字典列表
+    """
+    matches_info = []
+
+    for i, regex_pattern in enumerate(regex_list):
+        try:
+            # 使用re.finditer获取更详细的信息
+            pattern_matches = list(re.finditer(regex_pattern, text))
+
+            for match in pattern_matches:
+                match_info = {
+                    'pattern': regex_pattern,
+                    'match': match.group(),
+                    'start': match.start(),
+                    'end': match.end(),
+                    'pattern_index': i
+                }
+
+                if return_groups and match.groups():
+                    match_info['groups'] = match.groups()
+
+                matches_info.append(match_info)
+
+        except re.error as e:
+            print(f"正则表达式错误: {regex_pattern} - 错误信息: {e}")
+            continue
+
+    return matches_info
+
+
+# 简单的去重版本
+def reg_search_unique(text: str, regex_list: List[str]) -> List[str]:
+    """
+    去重版本的正则匹配函数
+    """
+    matches = reg_search(text, regex_list)
+    # 使用集合去重，保持顺序
+    seen = set()
+    unique_matches = []
+
+    for match in matches:
+        if match not in seen:
+            seen.add(match)
+            unique_matches.append(match)
+
+    return unique_matches
+
+
+if __name__ == "__main__":
+    # 运行测试
+    print("=== 基本版本测试 ===")
+    basic_results = test_reg_search()
+
+    print("\n=== 增强版本测试 ===")
+    enhanced_results = reg_search_enhanced(
+        """
+        标的证券：本期发行的证券为可交换为发行人所持中国长江电力股份
+        有限公司股票（股票代码：600900.SH，股票简称：长江电力）的可交换公司债券。
+        换股期限：本期可交换公司债券换股期限自可交换公司债券发行结束
+        之日满 12 个月后的第一个交易日起至可交换债券到期日止，即2023年 6 月 2 日至 2027 年 6 月 1 日止。
+        """,
+        [r'[0-9]{6}\.[A-Z]{2}', r'股票简称：([\u4e00-\u9fa5]+)', r'\d+个月'],
+        return_groups=True
+    )
+
+    for result in enhanced_results:
+        print(f"模式: {result['pattern']}")
+        print(f"匹配: '{result['match']}' (位置: {result['start']}-{result['end']})")
+        if 'groups' in result:
+            print(f"分组: {result['groups']}")
+        print("-" * 50)
